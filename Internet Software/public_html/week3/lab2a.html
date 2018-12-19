@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<!-- lab2a by Jonathan Rainwater
+This page utilizes CSS to format a table of the first ten U.S. presidents, their home states, and their years in office.
+-->
+<head>
+	<title>lab2a</title>
+	<meta name="author" content="Jonathan Rainwater">
+	<meta name="description" content="This page utilizes CSS to format a table of the first ten U.S. presidents, their home states, and their years in office.">
+<style>
+table {
+	border-collapse:collapse;
+	width:60%;
+	font-family:"Palatino Linotype", "Times New Roman", serif;
+}
+tr:nth-of-type(even) {
+	background-color:white;
+}
+tr:nth-of-type(odd) {
+	background-color:lightblue;
+}
+th, td {
+	padding:5px;
+}
+</style>
+</head>
+
+<body>
+	<table>
+		<tr style="background-color:blue; color:white;">
+			<th>Name</th>
+			<th>Home State</th>
+			<th>Years in Office</th>
+		</tr>
+		<tr><!-- 1st President -->
+			<td>George Washington</td>
+			<td>Virginia</td>
+			<td>1789-1797</td>
+		</tr>
+		<tr><!-- 2nd President -->
+			<td>John Adams</td>
+			<td>Massachusetts</td>
+			<td>1797-1801</td>
+		</tr>
+		<tr><!-- 3rd President -->
+			<td>Thomas Jefferson</td>
+			<td>Virginia</td>
+			<td>1801-1809</td>
+		</tr>
+		<tr><!-- 4th President -->
+			<td>James Madison</td>
+			<td>Virginia</td>
+			<td>1809-1817</td>
+		</tr>
+		<tr><!-- 5th President -->
+			<td>James Monroe</td>
+			<td>Virginia</td>
+			<td>1817-1825</td>
+		</tr>
+		<tr><!-- 6th President -->
+			<td>John Quincy Adams</td>
+			<td>Massachusetts</td>
+			<td>1825-1829</td>
+		</tr>
+		<tr><!-- 7th President -->
+			<td>Andrew Jackson</td>
+			<td>South Carolina</td>
+			<td>1829-1837</td>
+		</tr>
+		<tr><!-- 8th President -->
+			<td>Martin Van Buren</td>
+			<td>New York</td>
+			<td>1837-1841</td>
+		</tr>
+		<tr><!-- 9th President -->
+			<td>William Henry Harrison</td>
+			<td>Virginia</td>
+			<td>1841-1841</td>
+		</tr>
+		<tr><!-- 10th President -->
+			<td>John Tyler</td>
+			<td>Virginia</td>
+			<td>1841-1845</td>
+		</tr>
+	</table>
+</body>
+</html>

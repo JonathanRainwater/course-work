@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- lab6 by Jonathan Rainwater
+This is a game of Duck-Hunt using a Galaga ship.
+This is an example of jquery usage.
+-->
+<head>
+
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+
+	<title>Galaga Duck-Hunt</title>
+	<meta name="author" content="Jonathan Rainwater">
+	<meta name"description" content="This is a Galaga version of Duck-Hunt.">
+
+    <!-- Bootstrap core CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+    <!-- Bootstrap theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+    <!-- Include references to these scripts and css (or carousel will not work correctly) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+
+<style>
+
+#missle, .bomb {
+	width: 20px;
+	height: 20px;
+	position: absolute;
+	z-index: 10;
+}
+
+#ship {
+	width: 75px;
+	height: 75px;
+	position: absolute;
+}
+
+.duck {
+	// 400x300 original size
+	width: 200px;
+	height: 150px;
+	position: absolute;
+} 
+
+.boom {
+	// 495x300 original size
+	width: 200px;
+	height: 150px;
+	position: absolute;
+	z-index: -10;
+}
+
+.infoBox {
+	display: inline;
+	font-size: 20px;
+}
+
+#gameLevel, #score {
+	display: inline;
+}
+</style>
+
+<!-- <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script> -->
+
+<script>
+var directionX = 1; // 1 = Right, -1 = Left
+var directionY = 1; // 1 = Down, -1 = Up
+var ship; // Will hold a reference to the ship
+var shipSpeed = 1; // Speed multiplier for ship movement.
+var shipTravelIncrement = 10; // The ship moves this many pixels per move.
+var shipHeight = 75; // Will hold the height of the ship.
+var shipWidth = 75; // Will hold the width of the ship.
+var missle; // Will hold a reference to the missle.
+var missleSpeed = 1; // Speed multiplier for the missle movement.
+var missleTravelUpIncrement = 2; // The missle moves up this many pixels per move, before multiplier.
+var missleTravelUpDistance = missleSpeed * missleTravelUpIncrement; // Total ship travel distance per move.
+var missleHeight = 20; // Will hold the height of the missle.
+var missleWidth = 20; // Will hold the width of the missle.
+var missleAway = false; // Set to true when missle is fired. Set to false after missle-fire is over.
+var duckSpeed = 1; // Speed multiplier for duck movement.
+var duckTravelIncrement = 1; // The duck moves this many pixels per move, before muliplier.
+var duckTravelDistance = duckSpeed * duckTravelIncrement; //  Total distance covered by duck with each movement.
+// Arrays of directional information for each of the 10 ducks.
+var duckDirectionX = [1,1,1,1,1,1,1,1,1,1]; // 1 means heading right; -1 means heading left; 0 means no horizontal movement.
+var duckDirectionY = [1,1,1,1,1,1,1,1,1,1]; // 1 mens heading down; -1 means heading up; 0 means no vertical movement.
+var duckDirectionsOfTravel = [3,3,3,3,3,3,3,3,3,3] ; // 1 for X; 2 for Y; 3 for X and Y movement
+var moveDuckCounter = 0; // Get incremented by 1 for each interation of the moveDuck function.
+var moveDuckCounterTriggerPoint = 1000; // This interation of the moveDuckCounter will trigger random movement selection and bomb drop.
+var gameLevel = 1; // Indicates the current level of gameplay. Level increases as the game progresses.
+var score = 0; // Counts the number of ducks that have been slain.
+var ducks; // Will contain the 10 enemy ducks.
+var maxDuckIndex = 0; // Will be set to the index number of the ducks array that is the maximum number of ducks for the current level.
+var ducksKilledThisLevel = 0; // Tracks the ducks that have been killed for the current level.
+var originalDuckHeight = 150;
+var originalDuckWidth = 200;
+var currentDuckHeight;
+var currentDuckWidth;
+var levelSizeMultiplier = 1;			
+var booms; // Will hold explosion graphics for each duck when they die.
+var bombs; // Will hold bombs that each bird will drop.
+
+var bombSpeed = 1; // Speed multiplier for the missle movement.
+var bombTravelIncrement = 2; // The missle moves up this many pexels per move.
+var bombTravelDistance = bombSpeed * bombTravelIncrement;
+var bombDirectionX; // 1 means heading right; -1 means heading left; 0 means no horizontal movement.
+var bombDirectionY; // 1 mens heading down; -1 means heading up; 0 means no vertical movement.
+var bombHeight = 20;
+var bombWidth = 20;
+var bombsAway = false;
+
+// Will hold references to movement functions for each bomb. To be used with clearInterval.
+var bombMoveFunctions = [null,null,null,null,null,null,null,null,null,null]; 
+
+var originalBoomWidth = 200;
+var originalBoomHeight = 150;
+var currentBoomWidth;
+var currentBoomHeight;
+var ducksReadyToMove = false;
+var windowInnerHeight = $(window).innerHeight();
+var windowInnerWidth = $(window).innerWidth();
+
+
+function initSetup() {
+	setInterval(moveMissleUp, 5);
+	setInterval(moveDuck, 5);
+}
+
+
+// A function to move the ship left and right.
+function moveShip(direction) {
+var shipLeftSide = ship.offset().left;
+var shipRightSide = shipLeftSide + shipWidth;
+var shipTopSide = ship.offset().top;
+var shipBottomSide = shipTopSide + shipHeight;
+var travelDistance = shipSpeed * shipTravelIncrement; // Distance covered by ship with each movement.
+
+// Set new positions for left/right travel of ship.
+if (direction == 1) {
+	// Travel is rightward.
+	if (shipRightSide < windowInnerWidth - 100) {
+		// There is room left to travel rightward.
+  	shipLeftSide += (direction * travelDistance);
+	}
+} else {
+	//Travel is leftward.
+	if (shipLeftSide > 100) {
+		// There is room left to travel leftward.
+		shipLeftSide += (direction * travelDistance);
+	}
+}
+
+ship.offset({left:shipLeftSide});
+
+if (! missleAway) {
+	placeMissle(); // Move missle alone with ship.
+}
+
+} // End of moveShip function.
+
+
+// A function to move the missle upward until the top of screen is reached or target is hit.
+function moveMissleUp() {
+	if (! missleAway) {
+		// Missle has not been fired.
+		return; // Missle does not need to be moved.
+	}
+
+	var missleSideTop = missle.offset().top;
+	missleSideTop -= missleTravelUpDistance;
+
+	missle.offset({top: missleSideTop }); // Move the missle.
+
+	//Check if missle has impacted target.
+	checkForImpact(missleSideTop);
+
+	//Check if missle-fire is over.
+	if (missleSideTop <= 0) {
+		// Missle has reached the top of the screen.
+		missleAway = false; // To indicate that missle-fire is over.
+		placeMissle(); // To place the missle back on top of the ship.
+		// The body of this function will not run again until the user fires another missle.
+	}
+
+} // End of moveMissleUp function.
+
+
+// A function to check if the missle has impacted a target.
+function checkForImpact(missleSideTop) {
+	var centerOfMissleX = missle.offset().left + ( missleWidth / 2 );
+	var centerOfMissleY = missleSideTop + ( missleHeight / 2 );
+
+	for (var i = 0; i <= maxDuckIndex; i++) {
+		if (ducks[i].css("display") == "none") {
+			continue; // Don't process this loop iteration if this duck has already been killed for this level.
+		}
+
+		var centerOfDuckX = ducks[i].offset().left + ( ducks[i].width() / 2 );
+		var centerOfDuckY = ducks[i].offset().top + ( ducks[i].height() / 2 );
+
+		if (Math.abs(centerOfMissleX - centerOfDuckX) < 30  &&  Math.abs(centerOfMissleY - centerOfDuckY) < 30) {
+			score ++;
+			if (score >= 550 || gameLevel > 100) {
+				endGame("win"); 
+			}
+			$("#score").text(score);
+			missleAway = false;
+			placeMissle();
+			ducks[i].hide();
+			ducksKilledThisLevel ++;
+
+			booms[i].show();
+			booms[i].offset({
+				top: centerOfDuckY - (currentBoomHeight / 2),
+				left: centerOfDuckX - (currentBoomWidth / 2)
+			});
+			setTimeout( function () {booms[i].hide()}, 1000 );
+			break; // Don't check other ducks for this impact event.
+		}	
+	} // End of loop.
+
+	if (areAllDucksDead()) {
+		revealDucks();
+	}
+
+} // End of checkForImpact function.
+
+
+// A function to move the duck.
+function moveDuck() {
+	if (! ducksReadyToMove) {
+		return;
+	}
+
+	moveDuckCounter ++;
+
+	for (var i = 0; i <= maxDuckIndex; i++) {
+
+		if ( (moveDuckCounter >= moveDuckCounterTriggerPoint)  &&  (maxDuckIndex == i)  &&  (ducks[i].css("display") == "none") ) {
+			// This is the last iteration of this loop, so all ducks have now had their directions randomly changed.
+			moveDuckCounter = 0; // Reset the counter that triggers when the next random direction change will occur.
+		}
+
+		if (ducks[i].css("display") == "none") {
+			continue; // Don't process this loop iteration if this duck has already been killed for this level.
+		}
+
+		var duckLeftSide = ducks[i].offset().left;
+		var duckRightSide = duckLeftSide + currentDuckWidth;
+		var duckTopSide = ducks[i].offset().top;
+		var duckBottomSide = duckTopSide + currentDuckHeight;
+
+		// Trigger a random change in direction.
+		if (moveDuckCounter >= moveDuckCounterTriggerPoint) {
+			duckDirectionsOfTravel[i] = getRandomInteger(1,3) ; // 1 for X; 2 for Y; 3 for X and Y movement
+			duckDirectionX[i] = (getRandomInteger(0,1) == 1) ? duckDirectionX[i] : duckDirectionX[i] * -1;
+			duckDirectionY[i] = (getRandomInteger(0,1) == 1) ? duckDirectionY[i] : duckDirectionY[i] * -1;
+			if (duckDirectionX[i] == 1) {
+				ducks[i].css("transform", "scaleX(1)");
+			} else {
+				ducks[i].css("transform", "scaleX(-1)");
+			}
+			if (i == maxDuckIndex) {
+				// This is the last iteration of this loop, so all ducks have now had their directions randomly changed.
+				moveDuckCounter = 0; // Reset the counter that triggers when the next random direction change will occur.
+			}
+
+			if (! bombsAway) {
+				bombsAway = true;
+				placeBomb(i, duckLeftSide, duckBottomSide);
+				bombMoveFunctions[i] = setInterval(moveBomb, 5, i);
+			}
+		}
+
+		// Turn duck around if it reaches the edge of its flight area.
+		if (duckLeftSide <= 0) {
+			// No more room to travel left, so set direction to right.
+			duckDirectionX[i] = 1;
+			ducks[i].css("transform", "scaleX(1)");
+		} else if ( duckRightSide >= windowInnerWidth) {
+			// No more room to travel right, so set direction to left.
+			duckDirectionX[i] = -1;
+			ducks[i].css("transform", "scaleX(-1)");
+//console.log(currentDuckHeight + " " + duckLeftSide + " " + duckRightSide);
+//console.log( duckLeftSide + " " +  currentDuckWidth);
+		}
+		if (duckTopSide <= 0) {
+			// No more room to travel up, so set direction to down.
+			duckDirectionY[i] = 1;
+		} else if (duckBottomSide >= windowInnerHeight * 0.75) {
+			// No more room to travel down, so set direction to up.
+			duckDirectionY[i] = -1;
+		}
+
+		// Move this duck.
+		if (duckDirectionsOfTravel[i] == 1) {
+			// Only move the duck horizontally.
+			duckLeftSide += (duckDirectionX[i] * duckTravelDistance);
+			ducks[i].offset({left:duckLeftSide});
+		} else if (duckDirectionsOfTravel[i] == 2) {
+			// Only move the duck vertically.
+			duckTopSide += (duckDirectionY[i] * duckTravelDistance);
+			ducks[i].offset({top:duckTopSide});
+		} else if (duckDirectionsOfTravel[i] == 3) {
+			// Move the duck both horizontally and vertically.
+			duckLeftSide += (duckDirectionX[i] * duckTravelDistance);
+			ducks[i].offset({left:duckLeftSide});
+			duckTopSide += (duckDirectionY[i] * duckTravelDistance);
+			ducks[i].offset({top:duckTopSide});
+		}
+
+	} // End main for-loop.
+} // End of moveDuck function.
+
+
+// A function to reveal the proper number of ducks for each level.
+function revealDucks() {
+	// Reveal a duck for each of the first 10 levels, cumulatively; level 1 has one duck, level 2 has two ducks, level 10 has 10 ducks.
+	// At level 11, it goes back to one duck, and repeats the cycle.
+
+	if ( (gameLevel % 10 == 1) && (gameLevel >= 11) && (gameLevel < 100) ) {
+		levelSizeMultiplier -= 0.1;	
+		for (var i = 0; i <= 9; i++) {
+			ducks[i].height(originalDuckHeight * levelSizeMultiplier); 
+			ducks[i].width(originalDuckWidth * levelSizeMultiplier); 
+			booms[i].height(originalBoomHeight * levelSizeMultiplier); 
+			booms[i].width(originalBoomWidth * levelSizeMultiplier); 
+		}
+	}
+
+	setMaxDuckIndex();
+	for (var i = 0; i <= maxDuckIndex; i++) {
+		ducks[i].show();
+		ducks[i].offset({top:(i * 50) + 30,left:20});
+	}
+
+} // End of revealDucks funtion.
+
+
+// A function to determine if all the ducks for this level have been killed.
+// Returns true or false.
+function areAllDucksDead() {
+	if ( (ducksKilledThisLevel - 1) == maxDuckIndex) {
+		if (gameLevel < 100) {
+			gameLevel ++;
+			$("#gameLevel").text(gameLevel);
+			ducksKilledThisLevel = 0;
+			setMaxDuckIndex();
+			return true;
+		}
+	}
+	return false;
+}
+
+
+// A function to determine the total number of ducks needed for this level.
+function setMaxDuckIndex() {
+	// Reveal a duck for each of the first 10 levels, cumulatively; level 1 has one duck, level 2 has two ducks, level 10 has 10 ducks.
+	// At level 11, it goes back to one duck, and repeats the cycle.
+	var subCycleNumber = (gameLevel % 10) - 1; // Levels x1 - x9 will be 0 - 8. Level x0 will be -1. Level 1 is the 1st level.
+	maxDuckIndex = (subCycleNumber > -1) ? subCycleNumber : 9;
+}
+
+
+function placeBomb(i, duckLeftSide, duckBottomSide) {
+	var centerOfDuckX = duckLeftSide + (currentDuckWidth / 2);
+	bombs[i].show();
+	bombs[i].offset({top: duckBottomSide, left: centerOfDuckX - (bombWidth / 2)});
+}
+
+
+// A function to move the bomb downward until the bottom of screen is reached or target is hit.
+function moveBomb(i) {
+	var bombSideTop = bombs[i].offset().top;
+	bombSideTop += bombTravelDistance;
+
+	bombs[i].offset({top: bombSideTop }); // Move the bomb.
+
+	//Check if bomb has impacted target.
+	var targetWasHit = checkForBombImpact(i, bombSideTop);
+
+	//Check if bomb has reached the bottom of the screen.
+	if ( ((bombSideTop + bombHeight)  >= windowInnerHeight) || targetWasHit ) {
+		// Bomb has reached the bottom of the screen.
+		bombs[i].hide()
+		bombsAway = false;
+		clearInterval(bombMoveFunctions[i]);
+	}
+
+} // End of moveBomb function.
+
+
+// A function to check if the bomb has hit the ship.
+function checkForBombImpact(i, bombSideTop) {
+	var shipTopSide = ship.offset().top;
+	var shipBottomSide = shipTopSide + shipHeight;
+	var centerOfShipX = ship.offset().left + (shipWidth / 2);
+	var centerOfShipY = shipTopSide + (shipHeight / 2);
+	var centerOfBombX = bombs[i].offset().left + ( bombs[i].width() / 2 );
+	var centerOfBombY = bombSideTop + ( bombs[i].height() / 2 );
+
+		if (Math.abs(centerOfBombX - centerOfShipX) < 20  &&  Math.abs(centerOfBombY - centerOfShipY) < 20) {
+			ship.hide();
+			missle.hide();
+			booms[10].show();
+			booms[10].offset({
+				top: shipBottomSide - originalBoomHeight,
+				left: centerOfShipX - (originalBoomWidth / 2)
+			});
+			setTimeout( function () {
+				booms[10].hide();
+				endGame("lose");
+			}, 1000 );
+			return true; // To indicate that the ship was hit.
+		}	
+
+} // End of checkForBombImpact function.
+
+
+// A function to end the game as a win or a loss.
+function endGame(result) {
+	if (result == "win") {
+		//alert("You win!");
+		$("#winModal").modal("show");
+	} else {
+		$("#loseModal").modal("show");
+		//alert("You lose!");
+	}
+}	// End of endGame funtion.
+
+
+// document.ready function.
+$(document).ready(function() {
+	
+	ducks = [
+		$("#duck01"),
+		$("#duck02"),
+		$("#duck03"),
+		$("#duck04"),
+		$("#duck05"),
+		$("#duck06"),
+		$("#duck07"),
+		$("#duck08"),
+		$("#duck09"),
+		$("#duck10")
+	]; // Contains the 10 enemy ducks.
+
+	booms = [
+		$("#boom01"),
+		$("#boom02"),
+		$("#boom03"),
+		$("#boom04"),
+		$("#boom05"),
+		$("#boom06"),
+		$("#boom07"),
+		$("#boom08"),
+		$("#boom09"),
+		$("#boom10"),
+		$("#boom11")
+	]; // Contains the 11 explosion graphics, one for each duck and one for the ship.
+
+	bombs = [
+		$("#bomb01"),
+		$("#bomb02"),
+		$("#bomb03"),
+		$("#bomb04"),
+		$("#bomb05"),
+		$("#bomb06"),
+		$("#bomb07"),
+		$("#bomb08"),
+		$("#bomb09"),
+		$("#bomb10")
+	]; // Contains the 10 bombs, one for each duck.
+
+	windowInnerHeight = $(window).innerHeight();
+	windowInnerWidth = $(window).innerWidth();
+	ship = $("#ship");
+	//shipHeight = ship.height();
+	//shipWidth = ship.width();
+	missle = $("#missle");
+	//missleHeight = missle.height();
+	//missleWidth = missle.width();
+	//originalDuckHeight = ducks[0].height();
+	//originalDuckWidth = ducks[0].width();
+	currentDuckHeight = originalDuckHeight;
+	currentDuckWidth = originalDuckWidth;	
+	//originalBoomHeight = booms[0].height();
+	//originalBoomWidth = booms[0].width();
+	currentBoomHeight = originalBoomHeight;
+	currentBoomWidth = originalBoomWidth;
+	//bombHeight = bombs[0].height();
+	//bombWidth = bombs[0].width();
+
+	for (var i = 0; i < 10; i++) {
+		ducks[i].hide();
+		booms[i].hide();
+		bombs[i].hide();
+//console.log(currentDuckHeight);
+//console.log(currentDuckWidth);
+	}
+	booms[10].hide();
+
+	$("#introModal").modal("show");
+
+	// Place ship at bottom-center of screen.
+	placeShip();
+	// Place missle on top of ship.
+	placeMissle();
+	// Reveal the first duck.
+	revealDucks();
+
+	// Replace objects if browser window is resized.
+	$(window).resize(function() {
+		windowInnerHeight = $(window).innerHeight();
+		windowInnerWidth = $(window).innerWidth();
+		placeShip();
+		placeMissle();
+	});
+
+	
+	// Move the ship or missle left or right and fire missle upon keypress.
+	$(document).keydown(function (e) {
+		if (e.keyCode == 38) {
+			// (up) Fire missle.
+			missleAway = true; // Indicates that the missle has been fired. Used in moveMissleUp function.
+		} else if (e.keyCode == 37) {
+			// (left)
+			moveShip(-1);
+		} else if (e.keyCode == 39) {
+			// (right)
+			moveShip(1);
+		}
+	}); // End of document.keydown function.
+
+	ducksReadyToMove = true;
+
+}); // End of document.ready function.	
+
+ 
+// A function to place the ship at the bottom-center of the screen.
+function placeShip() {
+  ship.offset({
+    top: (windowInnerHeight - shipHeight - 1),
+    left: ( (windowInnerWidth / 2) - (shipWidth / 2) )
+  });
+} // End of placeShip function.
+	
+	
+// A function to place the missle just above the ship.
+function placeMissle() {
+  var shipTopSide = ship.offset().top;
+  var shipLeftSide = ship.offset().left;
+	var shipCenter = shipLeftSide + ( shipWidth / 2 );
+
+	missle.offset({
+		top: shipTopSide + 1 - missleHeight,
+		left: shipCenter - (missleWidth / 2)
+	});
+} // End of placeMissle function.
+
+
+// A function to get a random number between min and max.
+function getRandomInteger(min,max) {
+	return( Math.floor(Math.random() * (max - min + 1) + min) );
+} // End of getRandomInteger function.
+	
+</script>
+</head>
+<body onload="initSetup();">
+<div class="infoBox">
+	&nbsp;Level: <div id="gameLevel">1</div><br>
+	&nbsp;Score: <div id="score">0</div>
+</div>
+<img id="missle" src="img/missle_20x20.png">
+<!-- ship.jpg borrowed from https://www.deviantart.com/mariicreations93/art/Galaga-s-Ship-Pixelized-480457973 -->
+<img id="ship" src="img/ship.jpg">
+<!-- duck.gif borrowed from https://dribbble.com/shots/1387749-Flying-Duck -->
+<img id="duck01" class="duck" src="img/duck.gif">
+<img id="duck02" class="duck" src="img/duck.gif">
+<img id="duck03" class="duck" src="img/duck.gif">
+<img id="duck04" class="duck" src="img/duck.gif">
+<img id="duck05" class="duck" src="img/duck.gif">
+<img id="duck06" class="duck" src="img/duck.gif">
+<img id="duck07" class="duck" src="img/duck.gif">
+<img id="duck08" class="duck" src="img/duck.gif">
+<img id="duck09" class="duck" src="img/duck.gif">
+<img id="duck10" class="duck" src="img/duck.gif">
+<!-- boom.gif borrowed from http://bestanimations.com/Military/Explosions/Explosions2.html -->
+<img id="boom01" class="boom" src="img/boom.gif">
+<img id="boom02" class="boom" src="img/boom.gif">
+<img id="boom03" class="boom" src="img/boom.gif">
+<img id="boom04" class="boom" src="img/boom.gif">
+<img id="boom05" class="boom" src="img/boom.gif">
+<img id="boom06" class="boom" src="img/boom.gif">
+<img id="boom07" class="boom" src="img/boom.gif">
+<img id="boom08" class="boom" src="img/boom.gif">
+<img id="boom09" class="boom" src="img/boom.gif">
+<img id="boom10" class="boom" src="img/boom.gif">
+<img id="boom11" class="boom" src="img/boom.gif">
+<img id="bomb01" class="bomb" src="img/ball_20x20.png">
+<img id="bomb02" class="bomb" src="img/ball_20x20.png">
+<img id="bomb03" class="bomb" src="img/ball_20x20.png">
+<img id="bomb04" class="bomb" src="img/ball_20x20.png">
+<img id="bomb05" class="bomb" src="img/ball_20x20.png">
+<img id="bomb06" class="bomb" src="img/ball_20x20.png">
+<img id="bomb07" class="bomb" src="img/ball_20x20.png">
+<img id="bomb08" class="bomb" src="img/ball_20x20.png">
+<img id="bomb09" class="bomb" src="img/ball_20x20.png">
+<img id="bomb10" class="bomb" src="img/ball_20x20.png">
+
+<div class="container">
+  <!-- Modal -->
+  <div class="modal fade" id="introModal" role="dialog">
+    <div class="modal-dialog">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">Galaga Duck-Hunt!</h4>
+        </div>
+        <div class="modal-body">
+          <p>Instructions:<br>
+	Press the left or right arrow keys to move the ship left or right.<br>
+	Press the up arrow key to fire a missle.<br>
+	<br>
+	If you make it though all 10 levels and kill all 550 ducks, you win!<br>
+	If they kill you, you lose!</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+</div> <!-- End container. -->
+
+
+
+<div class="container">
+  <!-- Modal -->
+  <div class="modal fade" id="winModal" role="dialog">
+    <div class="modal-dialog modal-sm">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">You win!</h4>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+</div> <!-- End container. -->
+
+
+<div class="container">
+  <!-- Modal -->
+  <div class="modal fade" id="loseModal" role="dialog">
+    <div class="modal-dialog modal-sm">
+    
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal">&times;</button>
+          <h4 class="modal-title">You lose!</h4>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+  
+</div> <!-- End container. -->
+
+
+
+</body>
+</html>

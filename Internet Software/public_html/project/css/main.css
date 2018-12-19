@@ -1,0 +1,43 @@
+  .nav-pills a:link,a:visited {
+    color:#e6f9ff;
+  }
+
+  .nav-pills a:hover {
+    color:#337ab7;
+  }
+
+  .intro {
+    margin-top:1px;
+    margin-bottom:1px;
+  }
+
+  .panel-body {
+    font-size:15px;
+  }
+
+  label {
+    color:#fff;
+    font-size:15px;
+  }
+
+  .sm-norm-label {
+    font-size: 14px;
+    font-weight: normal;
+    margin-top: 0px;
+  }
+
+  .inline {
+    display: inline;
+  }
+
+  .form-control {
+    font-size:17px;
+  }
+
+  .my-lists {
+    color:#000;
+    height:150px;
+    overflow:auto;
+    background-color:#ddd;
+  }
+

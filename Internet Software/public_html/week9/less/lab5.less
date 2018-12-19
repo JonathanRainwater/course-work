@@ -1,0 +1,52 @@
+@defaultTextColor:#C0C0C0; // Gray
+@defaultBackgroundColor:#2C2020; // Brown
+
+@logoNameWidth:245px; // This image's original dimensions.
+@logoNameHeight:34px; // This image's original dimensions.
+@logoNameModifier:2; // The ratio of change for this image.
+
+@logoFullWidth:268px; // This image's original dimensions.
+@logoFullHeight:64px; // This image's original dimensions.
+@logoFullModifier:2; // The ratio of change for this image.
+
+@inputButtonColorModifier:2; // The ratio of change for the input buttons color.
+
+
+// A parametric mixin that uses default values to auto-center elements.
+.SetMargin (@left:auto; @right:auto;) {
+	margin-left:@left;
+	margin-right:@right;
+}
+
+// A parametric mixin that takes width, height, and a reduction ratio to reduce an image size with a single call.
+.DivideImageSize (@width; @height; @modifier:1;) {
+	// Variable calculations.
+	width:@width / @modifier;
+	height:@height / @modifier;
+}
+
+body, input {
+        color:@defaultTextColor;
+        background-color:@defaultBackgroundColor;
+}
+
+legend, p.head {
+        color:lighten(@defaultTextColor, 13%); // A color function.
+        font-size:150%;
+        font-family:monospace;
+}
+
+input.button {
+        font-size:120%;
+	&:hover { background-color:@defaultBackgroundColor * @inputButtonColorModifier; } // A color calculation.
+}
+
+img.logoName {
+	.DivideImageSize(@logoNameWidth, @logoNameHeight, @logoNameModifier);
+}
+
+img.logoImage {
+	.DivideImageSize(@logoFullWidth, @logoFullHeight, @logoFullModifier);
+	display:block;
+	.SetMargin;
+}
