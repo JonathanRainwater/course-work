@@ -1,0 +1,30 @@
+Carl
+Carter
+03/31/1933
+Business Associate
+865-333-3333
+333 Coblestone Way
+Centerville
+CC
+33333
+
+Andy
+Adams
+11/11/1911
+Family
+865-111-1111
+111 Elm St.
+Bucksnort
+AA
+11111
+
+Bob
+Barker
+02/22/1922
+Friend
+865-222-2222
+222 Street St.
+Hogwash
+BB
+22222
+
